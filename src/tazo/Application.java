@@ -349,11 +349,11 @@ public class Application {
 		ResultSet rs = null;
 		
 		String sqls[] = {
-				"CREATE TABLE IF NOT EXISTS stage(id int NOT NULL AUTO_INCREMENT, name varchar(200), location varchar(200), capacity int, assigned int DEFAULT 0, PRIMARY KEY (id))",
-				"CREATE TABLE IF NOT EXISTS concert(id int NOT NULL AUTO_INCREMENT, name varchar(200), type varchar(200), price int, booked int DEFAULT 0, PRIMARY KEY (id))",
+				"CREATE TABLE IF NOT EXISTS stage(id int NOT NULL AUTO_INCREMENT, name varchar(200), location varchar(200), capacity int, PRIMARY KEY (id))",
+				"CREATE TABLE IF NOT EXISTS concert(id int NOT NULL AUTO_INCREMENT, name varchar(200), type varchar(200), price int, PRIMARY KEY (id))",
 				"CREATE TABLE IF NOT EXISTS audience(id int NOT NULL AUTO_INCREMENT, name varchar(200), sex varchar(1), age int, PRIMARY KEY (id))",
-				"CREATE TABLE IF NOT EXISTS assign(sid int, cid int, FOREIGN KEY(sid) REFERENCES stage(id), FOREIGN KEY (cid) REFERENCES concert(id), PRIMARY KEY (cid))",
-				"CREATE TABLE IF NOT EXISTS book(cid int, aid int, seat int, FOREIGN KEY(cid) REFERENCES concert(id), FOREIGN KEY (aid) REFERENCES audience(id), PRIMARY KEY (cid, seat))",
+				"CREATE TABLE IF NOT EXISTS assign(sid int, cid int, FOREIGN KEY(sid) REFERENCES stage(id) ON DELETE CASCADE, FOREIGN KEY (cid) REFERENCES concert(id) ON DELETE CASCADE, PRIMARY KEY (cid))",
+				"CREATE TABLE IF NOT EXISTS book(cid int, aid int, seat int, FOREIGN KEY(cid) REFERENCES concert(id) ON DELETE CASCADE, FOREIGN KEY (aid) REFERENCES audience(id) ON DELETE CASCADE, PRIMARY KEY (cid, seat))",
 		};
 		
 		for(int i=0;i<5;i++) {
@@ -361,7 +361,7 @@ public class Application {
 				stmt = conn.prepareStatement(sqls[i]);
 				rs = stmt.executeQuery();
 			} catch (SQLException e) {
-				e.getMessage();
+				e.printStackTrace();
 			} finally {
 				if(rs != null) {
 					try {
@@ -385,7 +385,7 @@ public class Application {
 	{
 		PreparedStatement stmt = null;
 		ResultSet rs = null;
-		String sql = "SELECT * FROM stage";
+		String sql = "SELECT stage.*, count(cid) AS assigned FROM stage LEFT JOIN assign ON id=sid GROUP BY id";
 		System.out.println("---------------------------------------------------");
 		System.out.println("id	name				location		capacity		assigned");
 		System.out.println("---------------------------------------------------");
@@ -430,7 +430,7 @@ public class Application {
 	{
 		PreparedStatement stmt = null;
 		ResultSet rs = null;
-		String sql = "SELECT * FROM concert";
+		String sql = "SELECT concert.*, count(aid) as booked FROM concert LEFT JOIN book ON id=cid GROUP BY id";
 		System.out.println("------------------------------------------------------");
 		System.out.println("id	name				type		price		booked");
 		System.out.println("------------------------------------------------------");
@@ -719,26 +719,6 @@ public class Application {
 				}
 			}
 		}
-		
-		// success insert
-		if(count > 0) {
-			sql = "UPDATE stage SET assigned=assigned+1 WHERE id=?";
-			try {
-				stmt = conn.prepareStatement(sql);
-				stmt.setInt(1, sid);
-				stmt.executeUpdate();
-			} catch (SQLException e) {
-				e.printStackTrace();
-			} finally {
-				if(stmt != null) {
-					try {
-						stmt.close();
-					} catch (SQLException ee) {
-						ee.printStackTrace();
-					}
-				}
-			}
-		}
 	}
 	
 	public static void insertIntoBook(int cid, int aid, ArrayList<Integer> seatList) {
@@ -767,26 +747,6 @@ public class Application {
 						stmt.close();
 					} catch (SQLException ee) {
 						ee.printStackTrace();
-					}
-				}
-			}
-			
-			// success insert
-			if(count > 0) {
-				sql = "UPDATE concert SET booked=booked+1 WHERE id=?";
-				try {
-					stmt = conn.prepareStatement(sql);
-					stmt.setInt(1, cid);
-					stmt.executeUpdate();
-				} catch (SQLException e) {
-					e.printStackTrace();
-				} finally {
-					if(stmt != null) {
-						try {
-							stmt.close();
-						} catch (SQLException ee) {
-							ee.printStackTrace();
-						}
 					}
 				}
 			}
@@ -838,7 +798,7 @@ public class Application {
 	public static void selectAllAssignedStage(int sid) {
 		PreparedStatement stmt = null;
 		ResultSet rs = null;
-		String sql = "SELECT * FROM concert, assign WHERE assign.sid=? and concert.id=assign.cid";
+		String sql = "SELECT concert.*, count(aid) as booked FROM concert LEFT JOIN book ON id=cid, assign WHERE assign.sid=? and concert.id=assign.cid GROUP BY id";
 		System.out.println("---------------------------------------------------");
 		System.out.println("id	name				type		price		booked");
 		System.out.println("---------------------------------------------------");
