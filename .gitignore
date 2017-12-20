@@ -1,5 +1,7 @@
 /.settings
 /bin
+/report
+/runnable
 .classpath
 .project
 .gitignore.swp

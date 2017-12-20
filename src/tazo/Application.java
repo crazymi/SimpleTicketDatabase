@@ -17,7 +17,7 @@ public class Application {
 	static final String USER_NAME = "u2013-11384";
 	static final String PASSWORD = "317f633e2c7d";
 	
-	static final String INTEGER_CONVERT_ERROR = "Input is not Integer";
+	static final String INTEGER_CONVERT_ERROR = "Input exceeds limit";
 	static final String INVALID_ACTION = "Invalid action";
 	
 	static Connection conn = null;
@@ -84,13 +84,22 @@ public class Application {
 				{
 					System.out.print("Building name: " );
 					String name = br.readLine();
+					name = truncateString(name);
+					
 					System.out.print("Building location: " );
 					String location = br.readLine();
+					location = truncateString(location);
+					
 					System.out.print("Building capacity: " );
 					String capstr = br.readLine();
 					
 					try {
 						int capacity = Integer.valueOf(capstr);
+						if(capacity <= 0)
+						{
+							System.out.println("Capacity should be larger than 0");
+							return;
+						}
 						insertIntoStage(name, location, capacity);
 					} catch (NumberFormatException e) {
 						System.out.println(INTEGER_CONVERT_ERROR);
@@ -117,13 +126,22 @@ public class Application {
 				{
 					System.out.print("Performance name: " );
 					String name = br.readLine();
+					name = truncateString(name);
+					
 					System.out.print("Performance type: " );
 					String type = br.readLine();
+					type = truncateString(type);
+					
 					System.out.print("Performance price: " );
 					String pricestr = br.readLine();
 					
 					try {
 						int price = Integer.valueOf(pricestr);
+						if(price < 0)
+						{
+							System.out.println("Price should be 0 or more");
+							return;
+						}
 						insertIntoConcert(name, type, price);
 					} catch (NumberFormatException e) {
 						System.out.println(INTEGER_CONVERT_ERROR);
@@ -150,13 +168,23 @@ public class Application {
 				{
 					System.out.print("Audience name: " );
 					String name = br.readLine();
+					name = truncateString(name);
+					
 					System.out.print("Audience gender: " );
 					String gender = br.readLine();
+					if(!gender.equals("M") && !gender.equals("F")) {
+						System.out.println("Gender should be 'M' or 'F'");
+						return;
+					}
 					System.out.print("Audience age: " );
 					String agestr = br.readLine();
 					
 					try {
 						int age = Integer.valueOf(agestr);
+						if(age <= 0) {
+							System.out.println("Age should be more than 0");
+							return;
+						}
 						insertIntoAudience(name, gender, age);
 					} catch (NumberFormatException e) {
 						System.out.println(INTEGER_CONVERT_ERROR);
@@ -181,13 +209,15 @@ public class Application {
 				// 10. assign a performance to a building
 				case 10:
 				{
-					System.out.print("Building ID: " );
-					String sidstr = br.readLine();
-					System.out.print("Performance ID: " );
-					String cidstr = br.readLine();
 					try {
+						System.out.print("Building ID: " );
+						String sidstr = br.readLine();
 						int sid = Integer.valueOf(sidstr);
+						
+						System.out.print("Performance ID: " );
+						String cidstr = br.readLine();
 						int cid = Integer.valueOf(cidstr);
+						
 						insertIntoAssign(sid, cid);
 					} catch (NumberFormatException e) {
 						System.out.println(INTEGER_CONVERT_ERROR);
@@ -198,15 +228,18 @@ public class Application {
 				// 11. book a performance
 				case 11:
 				{
-					System.out.print("Performance ID: " );
-					String cidstr = br.readLine();
-					System.out.print("Audience ID: " );
-					String aidstr = br.readLine();
-					System.out.print("Seat number: " );
-					String seatstr = br.readLine();
 					try {
+						System.out.print("Performance ID: " );
+						String cidstr = br.readLine();
 						int cid = Integer.valueOf(cidstr);
+						
+						System.out.print("Audience ID: " );
+						String aidstr = br.readLine();
 						int aid = Integer.valueOf(aidstr);
+						
+						System.out.print("Seat number: " );
+						String seatstr = br.readLine();
+						
 						ArrayList<Integer> seatList = new ArrayList<>();
 						String[] list = seatstr.split(",");
 						for(String s : list) {
@@ -385,7 +418,8 @@ public class Application {
 			}
 		}
 	}
-	
+
+	// 1. print all buildings
 	public static void selectAllFromStage()
 	{
 		PreparedStatement stmt = null;
@@ -431,6 +465,7 @@ public class Application {
 		System.out.println("---------------------------------------------------");
 	}
 
+	// 2. print all performances
 	public static void selectAllFromConcert()
 	{
 		PreparedStatement stmt = null;
@@ -476,6 +511,7 @@ public class Application {
 		System.out.println("------------------------------------------------------");
 	}
 
+	// 3. print all audiences
 	public static void selectAllFromAudience()
 	{
 		PreparedStatement stmt = null;
@@ -519,16 +555,11 @@ public class Application {
 		System.out.println("----------------------------------------------");
 	}
 	
+	// 4. insert a new building
 	public static void insertIntoStage(String name, String location, int capacity) {
 		PreparedStatement stmt = null;
 		String sql = "INSERT INTO stage(name, location, capacity) VALUES(?, ?, ?)";
 		int count = 0;
-		
-		if(capacity <= 0)
-		{
-			System.out.println("Capacity should be larger than 0");
-			return;
-		}
 		
 		try {
 			stmt = conn.prepareStatement(sql);
@@ -553,16 +584,11 @@ public class Application {
 		}
 	}
 	
+	// 6. insert a new performance
 	public static void insertIntoConcert(String name, String type, int price) {
 		PreparedStatement stmt = null;
 		String sql = "INSERT INTO concert(name, type, price) VALUES(?, ?, ?)";
 		int count = 0;
-		
-		if(price < 0)
-		{
-			System.out.println("Price should be 0 or more");
-			return;
-		}
 		
 		try {
 			stmt = conn.prepareStatement(sql);
@@ -585,19 +611,10 @@ public class Application {
 		}
 	}
 	
+	// 8. insert a new audience
 	public static void insertIntoAudience(String name, String sex, int age) {
 		PreparedStatement stmt = null;
 		String sql = "INSERT INTO audience(name, sex, age) VALUES(?, ?, ?)";
-		
-		if(!sex.equals("M") && !sex.equals("F")) {
-			System.out.println("Gender should be 'M' or 'F'");
-			return;
-		}
-		
-		if(age <= 0) {
-			System.out.println("Age should be more than 0");
-			return;
-		}
 		
 		try {
 			stmt = conn.prepareStatement(sql);
@@ -620,6 +637,7 @@ public class Application {
 		}
 	}
 	
+	// 5. remove a building
 	public static void deleteFromStage(int id) {
 		PreparedStatement stmt = null;
 		String sql = "DELETE FROM stage WHERE id=?";
@@ -645,6 +663,7 @@ public class Application {
 		}
 	}
 	
+	// 7. remove a performance
 	public static void deleteFromConcert(int id) {
 		PreparedStatement stmt = null;
 		String sql = "DELETE FROM concert WHERE id=?";
@@ -670,6 +689,7 @@ public class Application {
 		}
 	}
 
+	// 9. remove an audience
 	public static void deleteFromAudience(int id) {
 		PreparedStatement stmt = null;
 		String sql = "DELETE FROM audience WHERE id=?";
@@ -695,6 +715,7 @@ public class Application {
 		}
 	}
 
+	// 10. assign a performance to a building
 	public static void insertIntoAssign(int sid, int cid) {
 		PreparedStatement stmt = null;
 		String sql = "INSERT INTO assign VALUES(?, ?)";
@@ -726,6 +747,7 @@ public class Application {
 		}
 	}
 	
+	// 11. book a performance
 	public static void insertIntoBook(int cid, int aid, ArrayList<Integer> seatList) {
 		PreparedStatement stmt = null;
 		ResultSet rs = null;
@@ -812,6 +834,7 @@ public class Application {
 		}
 	}
 
+	// 12. print all performances which assigned at a building
 	public static void selectAllAssignedStage(int sid) {
 		PreparedStatement stmt = null;
 		ResultSet rs = null;
@@ -893,6 +916,7 @@ public class Application {
 		System.out.println("---------------------------------------------------");
 	}
 	
+	// 13. print all audiences who booked for a performance
 	public static void selectAllBookedAudience(int cid) {
 		PreparedStatement stmt = null;
 		ResultSet rs = null;
@@ -973,6 +997,7 @@ public class Application {
 		System.out.println("----------------------------------------------");
 	}
 	
+	// 14. print ticket booking status of a performance
 	public static void selectSeatInformation(int cid) {
 		PreparedStatement stmt = null;
 		ResultSet rs = null;
@@ -1058,4 +1083,10 @@ public class Application {
 		System.out.println("----------------------------------------------");
 	}
 
+	public static String truncateString(String s) {
+		if(s.length() > 200)
+			return s.substring(0, 200);
+		else
+			return s;
+	}
 }
