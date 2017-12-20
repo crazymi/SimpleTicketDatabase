@@ -197,7 +197,6 @@ public class Application {
 					
 				// 11. book a performance
 				case 11:
-					/*
 				{
 					System.out.print("Performance ID: " );
 					String cidstr = br.readLine();
@@ -219,7 +218,6 @@ public class Application {
 						System.out.println(INTEGER_CONVERT_ERROR);
 					}
 				}
-				*/
 					break;
 					
 				// 12. print all performances which assigned at a building
@@ -253,7 +251,14 @@ public class Application {
 				// 14. print ticket booking status of a performance
 				case 14:
 				{
-					
+					System.out.print("Performance ID: " );
+					String cidstr = br.readLine();
+					try {
+						int cid = Integer.valueOf(cidstr);
+						selectSeatInformation(cid);
+					} catch (NumberFormatException e) {
+						System.out.println(INTEGER_CONVERT_ERROR);
+					}
 				}
 					break;
 					
@@ -601,7 +606,7 @@ public class Application {
 			stmt.setInt(3, age);
 			int count = stmt.executeUpdate();
 			if(count > 0)
-				System.out.println("A audience is successfully inserted");
+				System.out.println("An audience is successfully inserted");
 		} catch (SQLException e) {
 			e.printStackTrace();
 		} finally {
@@ -674,7 +679,7 @@ public class Application {
 			stmt.setInt(1, id);
 			int count = stmt.executeUpdate();
 			if(count > 0)
-				System.out.println("A audience is successfully removed");
+				System.out.println("An audience is successfully removed");
 			else
 				System.out.println("Audience " + id + " doesn¡¯t exist");
 		} catch (SQLException e) {
@@ -724,74 +729,86 @@ public class Application {
 	public static void insertIntoBook(int cid, int aid, ArrayList<Integer> seatList) {
 		PreparedStatement stmt = null;
 		ResultSet rs = null;
-		String sql = "INSERT INTO book VALUES(?, ?, ?)";
-		int count = 0;
-		int tcount = 0;
+		String sql;
+		StringBuilder sb = new StringBuilder("INSERT INTO book VALUES");
+		int price = 0;
+		int age = 0;
+		int capacity = 0;
+		int count = 0;	
 		
-		for(int seat : seatList) {
-			try {
-				stmt = conn.prepareStatement(sql);
-				stmt.setInt(1, cid);
-				stmt.setInt(2, aid);
-				stmt.setInt(3, seat);
-				count = stmt.executeUpdate();
-				if(count <= 0) {
-					break;
-				}
-				tcount += count;
-			} catch (SQLException e) {
-				e.printStackTrace();
-			} finally {
-				if(stmt != null) {
-					try {
-						stmt.close();
-					} catch (SQLException ee) {
-						ee.printStackTrace();
-					}
+		sql = "SELECT price, age, capacity FROM stage, concert, audience, assign WHERE concert.id=? and audience.id=? and assign.cid=concert.id and stage.id=assign.sid";
+		try {
+			stmt = conn.prepareStatement(sql);
+			stmt.setInt(1, cid);
+			stmt.setInt(2, aid);
+			rs = stmt.executeQuery();
+			
+			// assert, #result is 0 or 1
+			while(rs.next()) {
+				price = rs.getInt("price");
+				age = rs.getInt("age");
+				capacity = rs.getInt("capacity");
+				break;
+			}
+		} catch (SQLException e) {
+			e.printStackTrace();
+		} finally {
+			if(stmt != null) {
+				try {
+					stmt.close();
+				} catch (SQLException ee) {
+					ee.printStackTrace();
 				}
 			}
 		}
 		
-		if(tcount > 0) {
-			sql = "SELECT price, age FROM concert, audience WHERE concert.id=? and audience.id=?";
-			int price = 0;
-			int age = 0;
-			try {
-				stmt = conn.prepareStatement(sql);
-				stmt.setInt(1, cid);
-				stmt.setInt(2, aid);
-				rs = stmt.executeQuery();
-				
-				while(rs.next()) {
-					price = rs.getInt("price");
-					age = rs.getInt("age");
-					break;
-				}
-			} catch (SQLException e) {
-				e.printStackTrace();
-			} finally {
-				if(stmt != null) {
-					try {
-						stmt.close();
-					} catch (SQLException ee) {
-						ee.printStackTrace();
-					}
+		if(age == 0 || capacity == 0) {
+			System.out.println("Performance " + cid + " or Audience " + aid + " don't exist");
+			return;
+		}
+
+		// repeatedly append (cid, aid, seat),  to INSERT at once
+		for(int seat : seatList) {
+			if(seat < 1 || seat > capacity) {
+				System.out.println("Seat number out of range");
+				return;
+			}
+			String str = String.format("(%d, %d, %d),", cid, aid, seat);
+			sb.append(str);
+		}
+		// remove last comma(,)
+		sb.setLength(sb.length() - 1);
+		
+		sql = sb.toString();
+		try {
+			stmt = conn.prepareStatement(sql);
+			count = stmt.executeUpdate();
+		} catch (SQLException e) {
+			System.out.println("The seat is already taken");
+		} finally {
+			if(stmt != null) {
+				try {
+					stmt.close();
+				} catch (SQLException ee) {
+					ee.printStackTrace();
 				}
 			}
-			
-			double totalprice = 0;
+		}
+		
+		if(count > 0) {
+			double rate = 0;
 			if(age >= 1 && age <= 7)
-				totalprice = 0;
+				rate = 0;
 			else if(age >=8 && age <= 12)
-				totalprice = tcount * price * 0.5;
+				rate = 0.5;
 			else if(age >=13 && age <= 18)
-				totalprice = tcount * price * 0.8;
+				rate = 0.8;
 			else
-				totalprice = tcount * price;
-				
+				rate = 1;
+			double totalprice = seatList.size() * price * rate;	
 			
 			System.out.println("Successfully book a performance");
-			System.out.printf("Total ticket price is %d", (int)totalprice);
+			System.out.printf("Total ticket price is %d\n", Math.round(totalprice));
 		}
 	}
 
@@ -886,11 +903,48 @@ public class Application {
 	public static void selectSeatInformation(int cid) {
 		PreparedStatement stmt = null;
 		ResultSet rs = null;
-		String sql = "SELECT * FROM book WHERE book.cid=?";
+		int capacity = 0;
+		
+		String sql = "SELECT capacity FROM stage, assign WHERE sid=id and cid=?";
+		try {
+			stmt = conn.prepareStatement(sql);
+			stmt.setInt(1, cid);
+			rs = stmt.executeQuery();
+			while(rs.next()) {
+				capacity = rs.getInt("capacity");
+				break;
+			} 
+		} catch (SQLException e) {
+			e.printStackTrace();
+		} finally {
+			if(rs != null) {
+				try {
+					rs.close();
+				} catch (SQLException ee) {
+					ee.printStackTrace();
+				}
+			}
+			
+			if(stmt != null) {
+				try {
+					stmt.close();
+				} catch (SQLException ee) {
+					ee.printStackTrace();
+				}
+			}
+		}
+		
+		if(capacity == 0) {
+			System.out.println("Performance " + cid + " isn't assigned");
+			return;
+		}
+		
+		sql = "SELECT * FROM book WHERE book.cid=?";
 		System.out.println("----------------------------------------------");
 		System.out.println("seat_number			audience_id");
 		System.out.println("----------------------------------------------");
 		
+		int idx = 1;
 		try {
 			stmt = conn.prepareStatement(sql);
 			stmt.setInt(1, cid);
@@ -900,7 +954,14 @@ public class Application {
 				int seat = rs.getInt("seat");
 				int aid = rs.getInt("aid");
 				
+				while(idx < seat) {
+					System.out.printf("%-6d\n", idx++);
+				}
 				System.out.printf("%-6d%-6d\n", seat, aid);
+				idx = seat + 1;
+			}
+			while(idx <= capacity) {
+				System.out.printf("%-6d\n", idx++);
 			}
 		} catch (SQLException e) {	
 			e.printStackTrace();
