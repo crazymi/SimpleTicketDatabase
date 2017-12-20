@@ -392,7 +392,7 @@ public class Application {
 		ResultSet rs = null;
 		String sql = "SELECT stage.*, count(cid) AS assigned FROM stage LEFT JOIN assign ON id=sid GROUP BY id";
 		System.out.println("---------------------------------------------------");
-		System.out.println("id	name				location		capacity		assigned");
+		System.out.println("id	name          location      capacity   assigned");
 		System.out.println("---------------------------------------------------");
 		
 		try {
@@ -437,7 +437,7 @@ public class Application {
 		ResultSet rs = null;
 		String sql = "SELECT concert.*, count(aid) as booked FROM concert LEFT JOIN book ON id=cid GROUP BY id";
 		System.out.println("------------------------------------------------------");
-		System.out.println("id	name				type		price		booked");
+		System.out.println("id	name		type	price		booked");
 		System.out.println("------------------------------------------------------");
 		
 		try {
@@ -482,7 +482,7 @@ public class Application {
 		ResultSet rs = null;
 		String sql = "SELECT * FROM audience";
 		System.out.println("----------------------------------------------");
-		System.out.println("id	name				gender		age");
+		System.out.println("id	name			gender		age");
 		System.out.println("----------------------------------------------");
 		
 		try {
@@ -815,9 +815,45 @@ public class Application {
 	public static void selectAllAssignedStage(int sid) {
 		PreparedStatement stmt = null;
 		ResultSet rs = null;
-		String sql = "SELECT concert.*, count(aid) as booked FROM concert LEFT JOIN book ON id=cid, assign WHERE assign.sid=? and concert.id=assign.cid GROUP BY id";
+		int scount = 0;
+		String sql = "SELECT * FROM stage WHERE id=?";
+		
+		try {
+			stmt = conn.prepareStatement(sql);
+			stmt.setInt(1, sid);
+			rs = stmt.executeQuery();
+			
+			while(rs.next()) {
+				scount++;
+			}
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}  finally {
+			if(rs != null) {
+				try {
+					rs.close();
+				} catch (SQLException ee) {
+					ee.printStackTrace();
+				}
+			}
+			
+			if(stmt != null) {
+				try {
+					stmt.close();
+				} catch (SQLException ee) {
+					ee.printStackTrace();
+				}
+			}
+		}
+		
+		if(scount == 0) {
+			System.out.println("Building " + sid + " doesn¡¯t exist");
+			return;
+		}
+		
+		sql = "SELECT concert.*, count(aid) as booked FROM concert LEFT JOIN book ON id=cid, assign WHERE assign.sid=? and concert.id=assign.cid GROUP BY id";
 		System.out.println("---------------------------------------------------");
-		System.out.println("id	name				type		price		booked");
+		System.out.println("id	name		type	price		booked");
 		System.out.println("---------------------------------------------------");
 		
 		try {
@@ -860,9 +896,46 @@ public class Application {
 	public static void selectAllBookedAudience(int cid) {
 		PreparedStatement stmt = null;
 		ResultSet rs = null;
-		String sql = "SELECT * FROM audience, book WHERE book.cid=? and audience.id=book.aid GROUP BY audience.id";
+		
+		int ccount = 0;
+		String sql = "SELECT * FROM concert WHERE id=?";
+		
+		try {
+			stmt = conn.prepareStatement(sql);
+			stmt.setInt(1, cid);
+			rs = stmt.executeQuery();
+			
+			while(rs.next()) {
+				ccount++;
+			}
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}  finally {
+			if(rs != null) {
+				try {
+					rs.close();
+				} catch (SQLException ee) {
+					ee.printStackTrace();
+				}
+			}
+			
+			if(stmt != null) {
+				try {
+					stmt.close();
+				} catch (SQLException ee) {
+					ee.printStackTrace();
+				}
+			}
+		}
+		
+		if(ccount == 0) {
+			System.out.println("Performance " + cid + " doesn¡¯t exist");
+			return;
+		}
+		
+		sql = "SELECT * FROM audience, book WHERE book.cid=? and audience.id=book.aid GROUP BY audience.id";
 		System.out.println("----------------------------------------------");
-		System.out.println("id	name				gender		age");
+		System.out.println("id	name			gender		age");
 		System.out.println("----------------------------------------------");
 		
 		try {
